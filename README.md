@@ -172,7 +172,7 @@ Transform how people think about clothing consumption by creating a community-dr
 ---
 
 ## Team Members:
-- [Hardik khasliwala](https://github.com/THECH13F)
+- [Hardik kasliwal](https://github.com/THECH13F)
 - [Prerit Kotak](https://github.com/Kotak-Prerit)
 - [kuldeep khalotiya](https://github.com/Kuldeep-2303)
 - [Dhvani Patel](https://github.com/pateldhvani20)
