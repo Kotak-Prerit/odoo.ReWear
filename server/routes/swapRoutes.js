@@ -1,0 +1,10 @@
+const express = require("express");
+const router = express.Router();
+const swapController = require("../controllers/swapController");
+const { protect } = require("../middlewares/authMiddleware");
+
+router.post("/", protect, swapController.createSwapRequest);
+router.get("/my-swaps", protect, swapController.getUserSwapRequests);
+router.patch("/:id/status", protect, swapController.updateSwapStatus);
+
+module.exports = router;
