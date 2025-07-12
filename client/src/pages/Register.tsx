@@ -35,10 +35,12 @@ const Register = () => {
     },
   });
 
-  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
+  const handleGoogleSuccess = async (credentialResponse: {
+    credential?: string;
+  }) => {
     try {
       if (!credentialResponse.credential) return;
-      
+
       const res = await axios.post("/api/users/google-login", {
         token: credentialResponse.credential,
       });
@@ -60,8 +62,8 @@ const Register = () => {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Already have an account?{" "}
-            <Link 
-              to="/login" 
+            <Link
+              to="/login"
               className="font-medium text-black hover:underline"
             >
               Sign in here
@@ -88,7 +90,9 @@ const Register = () => {
                     required
                   />
                   {formik.errors.username && (
-                    <div className="text-red-500 text-sm mt-1">{formik.errors.username}</div>
+                    <div className="text-red-500 text-sm mt-1">
+                      {formik.errors.username}
+                    </div>
                   )}
                 </div>
               </div>
@@ -111,7 +115,9 @@ const Register = () => {
                     required
                   />
                   {formik.errors.email && (
-                    <div className="text-red-500 text-sm mt-1">{formik.errors.email}</div>
+                    <div className="text-red-500 text-sm mt-1">
+                      {formik.errors.email}
+                    </div>
                   )}
                 </div>
               </div>
@@ -134,7 +140,9 @@ const Register = () => {
                     required
                   />
                   {formik.errors.password && (
-                    <div className="text-red-500 text-sm mt-1">{formik.errors.password}</div>
+                    <div className="text-red-500 text-sm mt-1">
+                      {formik.errors.password}
+                    </div>
                   )}
                 </div>
               </div>
@@ -144,7 +152,9 @@ const Register = () => {
                   className="inline-flex w-full items-center justify-center rounded-md bg-black px-3.5 py-2.5 font-semibold leading-7 text-white hover:bg-black/80"
                   disabled={formik.isSubmitting}
                 >
-                  {formik.isSubmitting ? "Creating account..." : "Create account"}
+                  {formik.isSubmitting
+                    ? "Creating account..."
+                    : "Create account"}
                 </button>
               </div>
             </div>
@@ -152,8 +162,8 @@ const Register = () => {
 
           <div className="mt-3 space-y-3">
             <div className="flex justify-center">
-              <GoogleLogin 
-                onSuccess={handleGoogleSuccess} 
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
                 onError={() => {}}
                 text="signup_with"
                 theme="outline"
