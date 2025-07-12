@@ -1,4 +1,3 @@
-// Cloudinary configuration
 export const CLOUDINARY_CONFIG = {
   cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "YOUR_CLOUD_NAME",
   uploadPreset:
@@ -6,19 +5,15 @@ export const CLOUDINARY_CONFIG = {
   folder: "rewear",
 };
 
-// Helper function to get Cloudinary upload URL
 export const getCloudinaryUploadUrl = () => {
   return `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/upload`;
 };
 
-// Helper function to upload image to Cloudinary
 export const uploadImageToCloudinary = async (file: File): Promise<string> => {
-  // Validate file
   if (!file) {
     throw new Error("No file provided");
   }
 
-  // Check file size (max 10MB)
   const maxSize = 10 * 1024 * 1024; // 10MB
   if (file.size > maxSize) {
     throw new Error(
@@ -26,7 +21,6 @@ export const uploadImageToCloudinary = async (file: File): Promise<string> => {
     );
   }
 
-  // Check file type
   if (!file.type.startsWith("image/")) {
     throw new Error("Please select a valid image file");
   }
@@ -50,7 +44,6 @@ export const uploadImageToCloudinary = async (file: File): Promise<string> => {
     const data = await response.json();
     return data.secure_url;
   } catch (error) {
-    console.error("Error uploading to Cloudinary:", error);
     throw error;
   }
 };

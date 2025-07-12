@@ -1,4 +1,3 @@
-// Middleware to protect routes and check for admin privileges using JWT authentication
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 

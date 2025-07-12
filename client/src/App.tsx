@@ -6,6 +6,7 @@ import Landing from "./pages/Landing";
 import ListItem from "./pages/ListItem";
 import ProductDetail from "./pages/ProductDetail";
 import SwapPage from "./pages/SwapPage";
+import BrowseItems from "./pages/BrowseItems";
 import "./App.css";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -15,6 +16,7 @@ function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/browse" element={<BrowseItems />} />
       <Route path="/product/:id" element={<ProductDetail />} />
       <Route path="/swap" element={<SwapPage />} />
       <Route

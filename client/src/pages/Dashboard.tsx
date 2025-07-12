@@ -74,7 +74,6 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch user's listings
   const fetchMyListings = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -91,12 +90,10 @@ const Dashboard = () => {
         throw new Error("Failed to fetch listings");
       }
     } catch (err) {
-      console.error("Error fetching listings:", err);
       setError("Failed to load your listings");
     }
   }, []);
 
-  // Fetch user's purchases
   const fetchMyPurchases = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -113,12 +110,10 @@ const Dashboard = () => {
         throw new Error("Failed to fetch purchases");
       }
     } catch (err) {
-      console.error("Error fetching purchases:", err);
       setError("Failed to load your purchases");
     }
   }, []);
 
-  // Fetch outgoing swap requests
   const fetchOutgoingSwapRequests = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -135,12 +130,10 @@ const Dashboard = () => {
         throw new Error("Failed to fetch outgoing swap requests");
       }
     } catch (err) {
-      console.error("Error fetching outgoing swap requests:", err);
       setError("Failed to load your swap requests");
     }
   }, []);
 
-  // Fetch incoming swap requests
   const fetchIncomingSwapRequests = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -157,12 +150,10 @@ const Dashboard = () => {
         throw new Error("Failed to fetch incoming swap requests");
       }
     } catch (err) {
-      console.error("Error fetching incoming swap requests:", err);
       setError("Failed to load received swap requests");
     }
   }, []);
 
-  // Load data on component mount
   useEffect(() => {
     let isMounted = true; // Flag to prevent state updates if component unmounts
 
@@ -183,7 +174,6 @@ const Dashboard = () => {
         }
       } catch (err) {
         if (isMounted) {
-          console.error("Error loading data:", err);
           setError("Failed to load data");
         }
       } finally {
@@ -195,7 +185,6 @@ const Dashboard = () => {
 
     loadData();
 
-    // Cleanup function
     return () => {
       isMounted = false;
     };
@@ -207,7 +196,6 @@ const Dashboard = () => {
     user,
   ]);
 
-  // Handle item deletion
   const handleDeleteItem = useCallback(async (itemId: string) => {
     if (!confirm("Are you sure you want to delete this item?")) {
       return;
@@ -229,12 +217,10 @@ const Dashboard = () => {
         throw new Error("Failed to delete item");
       }
     } catch (err) {
-      console.error("Error deleting item:", err);
       alert("Failed to delete item. Please try again.");
     }
   }, []);
 
-  // Handle swap request response (accept/reject)
   const handleSwapResponse = useCallback(
     async (swapId: string, status: "accepted" | "rejected") => {
       try {
@@ -251,7 +237,6 @@ const Dashboard = () => {
         if (response.ok) {
           const data = await response.json();
           alert(data.message);
-          // Refresh the swap requests
           await Promise.all([
             fetchIncomingSwapRequests(),
             fetchOutgoingSwapRequests(),
@@ -262,7 +247,6 @@ const Dashboard = () => {
           alert(errorData.message || `Failed to ${status} swap request`);
         }
       } catch (err) {
-        console.error(`Error ${status} swap request:`, err);
         alert(`Failed to ${status} swap request. Please try again.`);
       }
     },

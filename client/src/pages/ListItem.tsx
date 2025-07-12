@@ -34,7 +34,6 @@ const ListItem = () => {
   const [uploading, setUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Categories for dropdown
   const categories = [
     "T-Shirts",
     "Jeans",
@@ -50,7 +49,6 @@ const ListItem = () => {
     "Others",
   ];
 
-  // Conditions for dropdown
   const conditions = [
     { value: "new", label: "New" },
     { value: "like-new", label: "Like New" },
@@ -59,7 +57,6 @@ const ListItem = () => {
     { value: "poor", label: "Poor" },
   ];
 
-  // Sizes for dropdown
   const sizes = [
     "XS",
     "S",
@@ -72,14 +69,12 @@ const ListItem = () => {
     "Custom",
   ];
 
-  // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setSelectedFiles(e.target.files);
     }
   };
 
-  // Handle form input changes
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -92,7 +87,6 @@ const ListItem = () => {
     }));
   };
 
-  // Upload images to Cloudinary
   const handleImageUpload = async () => {
     if (!selectedFiles || selectedFiles.length === 0) {
       return;
@@ -110,21 +104,18 @@ const ListItem = () => {
         images: [...prev.images, ...imageUrls],
       }));
 
-      // Clear file input
       setSelectedFiles(null);
       const fileInput = document.getElementById("images") as HTMLInputElement;
       if (fileInput) fileInput.value = "";
 
       alert("Images uploaded successfully!");
     } catch (err) {
-      console.error("Upload error:", err);
       alert("Error uploading images. Please try again.");
     } finally {
       setUploading(false);
     }
   };
 
-  // Remove image from the list
   const removeImage = (index: number) => {
     setFormData((prev) => ({
       ...prev,
@@ -132,7 +123,6 @@ const ListItem = () => {
     }));
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -174,7 +164,6 @@ const ListItem = () => {
         alert(error.message || "Error listing item");
       }
     } catch (err) {
-      console.error("Submit error:", err);
       alert("Error listing item. Please try again.");
     } finally {
       setIsSubmitting(false);

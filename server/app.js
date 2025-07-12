@@ -28,4 +28,4 @@ app.use("/api/swaps", swapRoutes);
 app.use("/api/purchases", purchaseRoutes);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {});

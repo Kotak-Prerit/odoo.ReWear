@@ -37,13 +37,13 @@ const ProductDetail = () => {
     JSON.parse(localStorage.getItem("user") || "null")
   );
   const [userProducts, setUserProducts] = useState<Item[]>([]);
+  const [allProducts, setAllProducts] = useState<Item[]>([]);
   const [selectedSwapProduct, setSelectedSwapProduct] = useState<string>("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSwapModal, setShowSwapModal] = useState(false);
 
-  // Fetch product details
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
@@ -57,7 +57,6 @@ const ProductDetail = () => {
           throw new Error("Product not found");
         }
       } catch (err) {
-        console.error("Error fetching product:", err);
         setError("Failed to load product details");
       } finally {
         setLoading(false);
@@ -67,7 +66,6 @@ const ProductDetail = () => {
     fetchProduct();
   }, [id]);
 
-  // Fetch user's products for swapping
   useEffect(() => {
     const fetchUserProducts = async () => {
       if (!user) return;
@@ -85,12 +83,31 @@ const ProductDetail = () => {
           setUserProducts(data);
         }
       } catch (err) {
-        console.error("Error fetching user products:", err);
       }
     };
 
     fetchUserProducts();
   }, [user]);
+
+  useEffect(() => {
+    const fetchAllProducts = async () => {
+      try {
+        const response = await fetch("/api/items");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.items && Array.isArray(data.items)) {
+            const filteredProducts = data.items
+              .filter((item: Item) => item._id !== id)
+              .slice(0, 8);
+            setAllProducts(filteredProducts);
+          }
+        }
+      } catch (err) {
+      }
+    };
+
+    fetchAllProducts();
+  }, [id]);
 
   const handleSwap = () => {
     if (!user) {
@@ -138,7 +155,6 @@ const ProductDetail = () => {
 
         if (response.ok) {
           const data = await response.json();
-          // Update user points in localStorage and state using response data
           const updatedUser = { ...user, points: data.newBalance };
           localStorage.setItem("user", JSON.stringify(updatedUser));
           setUser(updatedUser);
@@ -149,7 +165,6 @@ const ProductDetail = () => {
           alert(errorData.message || "Purchase failed");
         }
       } catch (err) {
-        console.error("Error purchasing product:", err);
         alert("Purchase failed. Please try again.");
       }
     }
@@ -181,7 +196,6 @@ const ProductDetail = () => {
         alert(errorData.message || "Swap request failed");
       }
     } catch (err) {
-      console.error("Error sending swap request:", err);
       alert("Swap request failed. Please try again.");
     }
   };
@@ -380,6 +394,88 @@ const ProductDetail = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Related Products Section */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mt-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            More Products You Might Like
+          </h2>
+
+          {allProducts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {allProducts.map((item) => (
+                <div
+                  key={item._id}
+                  className="bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+                  onClick={() => navigate(`/product/${item._id}`)}
+                >
+                  <div className="rounded-t-xl h-48 overflow-hidden">
+                    {item.images && item.images.length > 0 ? (
+                      <img
+                        src={item.images[0]}
+                        alt={item.title}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="bg-gray-200 w-full h-full flex items-center justify-center">
+                        <span className="text-gray-500 text-sm">No Image</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4">
+                    <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">
+                      {item.title}
+                    </h3>
+
+                    <div className="mb-2">
+                      <span className="text-blue-600 font-bold text-lg">
+                        ₹{item.price}
+                      </span>
+                      <span className="text-sm text-gray-500 ml-2 capitalize">
+                        ({item.condition})
+                      </span>
+                    </div>
+
+                    <div className="flex gap-1 flex-wrap mb-3">
+                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                        {item.category}
+                      </span>
+                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                        {item.size}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/product/${item._id}`);
+                      }}
+                      className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-600">
+                No other products available at the moment.
+              </p>
+            </div>
+          )}
+
+          <div className="text-center mt-6">
+            <button
+              onClick={() => navigate("/browse")}
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold"
+            >
+              Browse All Products
+            </button>
           </div>
         </div>
       </div>

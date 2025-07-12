@@ -30,7 +30,6 @@ const purchaseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Index for efficient queries
 purchaseSchema.index({ buyer: 1, createdAt: -1 });
 purchaseSchema.index({ seller: 1, createdAt: -1 });
 

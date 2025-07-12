@@ -3,7 +3,6 @@ const Item = require("../models/Item");
 const User = require("../models/User");
 const nodemailer = require("nodemailer");
 
-// Configure nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -16,7 +15,6 @@ exports.createSwapRequest = async (req, res) => {
   const { targetItem, requesterItem } = req.body;
 
   try {
-    // Validate that both items exist
     const [targetItemDoc, requesterItemDoc] = await Promise.all([
       Item.findById(targetItem).populate("owner", "username email"),
       Item.findById(requesterItem),
@@ -30,21 +28,18 @@ exports.createSwapRequest = async (req, res) => {
       return res.status(404).json({ message: "Your item not found" });
     }
 
-    // Check if requester owns the offered item
     if (requesterItemDoc.owner.toString() !== req.user._id.toString()) {
       return res
         .status(403)
         .json({ message: "You don't own the offered item" });
     }
 
-    // Check if target item belongs to a different user
     if (targetItemDoc.owner._id.toString() === req.user._id.toString()) {
       return res
         .status(400)
         .json({ message: "You cannot swap with your own item" });
     }
 
-    // Check if both items are available
     if (
       targetItemDoc.status !== "available" ||
       requesterItemDoc.status !== "available"
@@ -54,7 +49,6 @@ exports.createSwapRequest = async (req, res) => {
         .json({ message: "One or both items are no longer available" });
     }
 
-    // Check if swap request already exists
     const existingSwap = await SwapRequest.findOne({
       requester: req.user._id,
       requestedItem: targetItem,
@@ -74,7 +68,6 @@ exports.createSwapRequest = async (req, res) => {
       offeredItem: requesterItem,
     });
 
-    // Populate the swap request with item and user details
     const populatedSwap = await SwapRequest.findById(swap._id)
       .populate("requester", "username email")
       .populate({
@@ -83,7 +76,6 @@ exports.createSwapRequest = async (req, res) => {
       })
       .populate("offeredItem");
 
-    // Send email notification to the target item owner
     try {
       const targetOwner = targetItemDoc.owner;
       const requesterName = req.user.username || req.user.email;
@@ -106,8 +98,6 @@ exports.createSwapRequest = async (req, res) => {
 
       await transporter.sendMail(mailOptions);
     } catch (emailError) {
-      console.error("Error sending email notification:", emailError);
-      // Don't fail the request if email fails
     }
 
     res.status(201).json({
@@ -115,14 +105,12 @@ exports.createSwapRequest = async (req, res) => {
       swap: populatedSwap,
     });
   } catch (error) {
-    console.error("Error creating swap request:", error);
     res
       .status(500)
       .json({ message: "Server error while creating swap request" });
   }
 };
 
-// Get swap requests sent by user (outgoing)
 exports.getUserSwapRequests = async (req, res) => {
   try {
     const swaps = await SwapRequest.find({ requester: req.user._id })
@@ -134,17 +122,14 @@ exports.getUserSwapRequests = async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(swaps);
   } catch (error) {
-    console.error("Error fetching user swap requests:", error);
     res
       .status(500)
       .json({ message: "Server error while fetching swap requests" });
   }
 };
 
-// Get swap requests received by user (incoming)
 exports.getReceivedSwapRequests = async (req, res) => {
   try {
-    // Find all swap requests where the user owns the requested item
     const userItems = await Item.find({ owner: req.user._id }).select("_id");
     const userItemIds = userItems.map((item) => item._id);
 
@@ -158,14 +143,12 @@ exports.getReceivedSwapRequests = async (req, res) => {
 
     res.json(swaps);
   } catch (error) {
-    console.error("Error fetching received swap requests:", error);
     res
       .status(500)
       .json({ message: "Server error while fetching received requests" });
   }
 };
 
-// Update swap request status (accept/reject)
 exports.updateSwapStatus = async (req, res) => {
   const { status } = req.body;
 
@@ -182,21 +165,18 @@ exports.updateSwapStatus = async (req, res) => {
       return res.status(404).json({ message: "Swap request not found" });
     }
 
-    // Check if user owns the requested item (can accept/reject)
     if (swap.requestedItem.owner._id.toString() !== req.user._id.toString()) {
       return res
         .status(403)
         .json({ message: "Not authorized to update this swap request" });
     }
 
-    // Check if request is still pending
     if (swap.status !== "pending") {
       return res
         .status(400)
         .json({ message: "Swap request has already been processed" });
     }
 
-    // Update swap status
     swap.status = status;
     await swap.save();
 
@@ -205,7 +185,6 @@ exports.updateSwapStatus = async (req, res) => {
     const ownerName = req.user.username || req.user.email;
 
     if (status === "accepted") {
-      // If accepted, perform the swap
       const requestedItem = await Item.findById(swap.requestedItem._id);
       const offeredItem = await Item.findById(swap.offeredItem._id);
 
@@ -213,7 +192,6 @@ exports.updateSwapStatus = async (req, res) => {
         return res.status(404).json({ message: "One or both items not found" });
       }
 
-      // Check if both items are still available
       if (
         requestedItem.status !== "available" ||
         offeredItem.status !== "available"
@@ -225,7 +203,6 @@ exports.updateSwapStatus = async (req, res) => {
           .json({ message: "One or both items are no longer available" });
       }
 
-      // Swap ownership
       const originalRequestedOwner = requestedItem.owner;
       const originalOfferedOwner = offeredItem.owner;
 
@@ -237,7 +214,6 @@ exports.updateSwapStatus = async (req, res) => {
 
       await Promise.all([requestedItem.save(), offeredItem.save()]);
 
-      // Update swap status to completed
       swap.status = "completed";
       await swap.save();
 
@@ -264,7 +240,6 @@ exports.updateSwapStatus = async (req, res) => {
       `;
     }
 
-    // Send email notification to requester
     try {
       const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -275,11 +250,8 @@ exports.updateSwapStatus = async (req, res) => {
 
       await transporter.sendMail(mailOptions);
     } catch (emailError) {
-      console.error("Error sending email notification:", emailError);
-      // Don't fail the request if email fails
     }
 
-    // Populate the updated swap for response
     const updatedSwap = await SwapRequest.findById(swap._id)
       .populate("requester", "username email")
       .populate({
@@ -293,7 +265,6 @@ exports.updateSwapStatus = async (req, res) => {
       swap: updatedSwap,
     });
   } catch (error) {
-    console.error("Error updating swap status:", error);
     res
       .status(500)
       .json({ message: "Server error while updating swap request" });

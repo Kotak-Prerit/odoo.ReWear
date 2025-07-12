@@ -39,13 +39,11 @@ const Landing = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Products state
   const [products, setProducts] = useState<Item[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch products function
   const fetchProducts = useCallback(async (page: number = 1) => {
     setLoading(true);
     setError(null);
@@ -61,7 +59,6 @@ const Landing = () => {
         throw new Error("Failed to fetch products");
       }
     } catch (err) {
-      console.error("Error fetching products:", err);
       setError("Failed to load products");
       setProducts([]);
     } finally {
@@ -69,12 +66,10 @@ const Landing = () => {
     }
   }, []);
 
-  // Load products on component mount
   useEffect(() => {
     fetchProducts(1);
   }, [fetchProducts]);
 
-  // Fake carousel images
   const carouselImages = [
     "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=400&fit=crop",
     "https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&h=400&fit=crop",
@@ -82,7 +77,6 @@ const Landing = () => {
     "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&h=400&fit=crop",
   ];
 
-  // Categories data
   const categories = [
     { name: "T-Shirts", icon: "👕" },
     { name: "Jeans", icon: "👖" },

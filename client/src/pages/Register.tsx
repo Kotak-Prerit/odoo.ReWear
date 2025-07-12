@@ -48,7 +48,6 @@ const Register = () => {
       localStorage.setItem("user", JSON.stringify(res.data));
       navigate("/dashboard");
     } catch {
-      // Handle error
     }
   };
 

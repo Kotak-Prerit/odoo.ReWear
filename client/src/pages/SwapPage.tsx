@@ -42,7 +42,6 @@ const SwapPage = () => {
   const [selectedProduct, setSelectedProduct] = useState<Item | null>(null);
   const [selectedUserProduct, setSelectedUserProduct] = useState<string>("");
 
-  // Fetch all products except user's own
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -52,7 +51,6 @@ const SwapPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        // Filter out user's own products on frontend as well
         const filteredProducts =
           data.items?.filter(
             (product: Item) => product.owner._id !== user?._id
@@ -62,7 +60,6 @@ const SwapPage = () => {
         throw new Error("Failed to fetch products");
       }
     } catch (err) {
-      console.error("Error fetching products:", err);
       setError("Failed to load products");
       setProducts([]);
     } finally {
@@ -70,7 +67,6 @@ const SwapPage = () => {
     }
   }, [user]);
 
-  // Fetch user's products for swapping
   const fetchUserProducts = useCallback(async () => {
     if (!user) return;
 
@@ -87,7 +83,6 @@ const SwapPage = () => {
         setUserProducts(data);
       }
     } catch (err) {
-      console.error("Error fetching user products:", err);
     }
   }, [user]);
 
@@ -140,7 +135,6 @@ const SwapPage = () => {
         alert(errorData.message || "Swap request failed");
       }
     } catch (err) {
-      console.error("Error sending swap request:", err);
       alert("Swap request failed. Please try again.");
     }
   };

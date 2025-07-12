@@ -43,7 +43,6 @@ const Login = () => {
       localStorage.setItem("user", JSON.stringify(res.data));
       navigate("/dashboard");
     } catch (err) {
-      // Handle error
     }
   };
 

@@ -31,7 +31,6 @@ exports.register = async (req, res) => {
       token,
     });
   } catch (error) {
-    console.error("Registration error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -92,7 +91,6 @@ exports.googleAuth = async (req, res) => {
       token: jwtToken,
     });
   } catch (error) {
-    console.error("Google Auth error:", error);
     res
       .status(401)
       .json({ message: "Google authentication failed", error: error.message });
