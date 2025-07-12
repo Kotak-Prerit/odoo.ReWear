@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String }, // Not required for Google users
     googleId: { type: String, unique: true, sparse: true },
     avatar: { type: String },
-    points: { type: Number, default: 0 },
+    points: { type: Number, default: 1200 },
     isAdmin: { type: Boolean, default: false },
   },
   { timestamps: true }

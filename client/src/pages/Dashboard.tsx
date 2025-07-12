@@ -1,8 +1,273 @@
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+
+interface Item {
+  _id: string;
+  title: string;
+  description: string;
+  images: string[];
+  category: string;
+  condition: string;
+  tags: string[];
+  size: string;
+  price: number;
+  currency: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Purchase {
+  _id: string;
+  buyer: {
+    _id: string;
+    username: string;
+    email: string;
+  };
+  seller: {
+    _id: string;
+    username: string;
+    email: string;
+  };
+  item: Item;
+  purchasePrice: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SwapRequest {
+  _id: string;
+  requester: {
+    _id: string;
+    username: string;
+    email: string;
+  };
+  requestedItem: Item & {
+    owner: {
+      _id: string;
+      username: string;
+      email: string;
+    };
+  };
+  offeredItem: Item;
+  status: "pending" | "accepted" | "rejected" | "completed";
+  createdAt: string;
+  updatedAt: string;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const [user] = useState(() => {
+    const userData = localStorage.getItem("user");
+    return userData ? JSON.parse(userData) : null;
+  });
+
+  const [myListings, setMyListings] = useState<Item[]>([]);
+  const [myPurchases, setMyPurchases] = useState<Purchase[]>([]);
+  const [outgoingSwapRequests, setOutgoingSwapRequests] = useState<
+    SwapRequest[]
+  >([]);
+  const [incomingSwapRequests, setIncomingSwapRequests] = useState<
+    SwapRequest[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch user's listings
+  const fetchMyListings = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/items/user", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMyListings(data);
+      } else {
+        throw new Error("Failed to fetch listings");
+      }
+    } catch (err) {
+      console.error("Error fetching listings:", err);
+      setError("Failed to load your listings");
+    }
+  }, []);
+
+  // Fetch user's purchases
+  const fetchMyPurchases = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/purchases/my-purchases", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMyPurchases(data);
+      } else {
+        throw new Error("Failed to fetch purchases");
+      }
+    } catch (err) {
+      console.error("Error fetching purchases:", err);
+      setError("Failed to load your purchases");
+    }
+  }, []);
+
+  // Fetch outgoing swap requests
+  const fetchOutgoingSwapRequests = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/swaps/my-requests", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setOutgoingSwapRequests(data);
+      } else {
+        throw new Error("Failed to fetch outgoing swap requests");
+      }
+    } catch (err) {
+      console.error("Error fetching outgoing swap requests:", err);
+      setError("Failed to load your swap requests");
+    }
+  }, []);
+
+  // Fetch incoming swap requests
+  const fetchIncomingSwapRequests = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/swaps/received", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIncomingSwapRequests(data);
+      } else {
+        throw new Error("Failed to fetch incoming swap requests");
+      }
+    } catch (err) {
+      console.error("Error fetching incoming swap requests:", err);
+      setError("Failed to load received swap requests");
+    }
+  }, []);
+
+  // Load data on component mount
+  useEffect(() => {
+    let isMounted = true; // Flag to prevent state updates if component unmounts
+
+    const loadData = async () => {
+      if (!isMounted) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        if (user && user.email) {
+          await Promise.all([
+            fetchMyListings(),
+            fetchMyPurchases(),
+            fetchOutgoingSwapRequests(),
+            fetchIncomingSwapRequests(),
+          ]);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error("Error loading data:", err);
+          setError("Failed to load data");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadData();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    fetchMyListings,
+    fetchMyPurchases,
+    fetchOutgoingSwapRequests,
+    fetchIncomingSwapRequests,
+    user,
+  ]);
+
+  // Handle item deletion
+  const handleDeleteItem = useCallback(async (itemId: string) => {
+    if (!confirm("Are you sure you want to delete this item?")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/items/${itemId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setMyListings((prev) => prev.filter((item) => item._id !== itemId));
+        alert("Item deleted successfully!");
+      } else {
+        throw new Error("Failed to delete item");
+      }
+    } catch (err) {
+      console.error("Error deleting item:", err);
+      alert("Failed to delete item. Please try again.");
+    }
+  }, []);
+
+  // Handle swap request response (accept/reject)
+  const handleSwapResponse = useCallback(
+    async (swapId: string, status: "accepted" | "rejected") => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`/api/swaps/${swapId}/status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          alert(data.message);
+          // Refresh the swap requests
+          await Promise.all([
+            fetchIncomingSwapRequests(),
+            fetchOutgoingSwapRequests(),
+            fetchMyListings(), // Refresh listings as items might have been swapped
+          ]);
+        } else {
+          const errorData = await response.json();
+          alert(errorData.message || `Failed to ${status} swap request`);
+        }
+      } catch (err) {
+        console.error(`Error ${status} swap request:`, err);
+        alert(`Failed to ${status} swap request. Please try again.`);
+      }
+    },
+    [fetchIncomingSwapRequests, fetchOutgoingSwapRequests, fetchMyListings]
+  );
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -33,36 +298,6 @@ const Dashboard = () => {
       </div>
     );
   };
-
-  // Mock data for listings and purchases
-  const myListings = [
-    {
-      id: 1,
-      title: "Blue Denim Jacket",
-      price: "$45",
-      image: "/placeholder1.jpg",
-    },
-    {
-      id: 2,
-      title: "Red Summer Dress",
-      price: "$35",
-      image: "/placeholder2.jpg",
-    },
-    {
-      id: 3,
-      title: "Black Sneakers",
-      price: "$60",
-      image: "/placeholder3.jpg",
-    },
-    { id: 4, title: "White T-Shirt", price: "$20", image: "/placeholder4.jpg" },
-  ];
-
-  const myPurchases = [
-    { id: 1, title: "Green Hoodie", price: "$40", image: "/placeholder5.jpg" },
-    { id: 2, title: "Brown Boots", price: "$80", image: "/placeholder6.jpg" },
-    { id: 3, title: "Pink Crop Top", price: "$25", image: "/placeholder7.jpg" },
-    { id: 4, title: "Dark Jeans", price: "$50", image: "/placeholder8.jpg" },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-200 via-green-100 to-blue-300">
@@ -145,7 +380,7 @@ const Dashboard = () => {
                   Points Balance
                 </label>
                 <p className="text-2xl font-bold text-blue-600">
-                  {user.points || 0} Points
+                  ₹{user.points || 0}
                 </p>
               </div>
             </div>
@@ -154,31 +389,110 @@ const Dashboard = () => {
 
         {/* My Listings Section */}
         <div className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-2xl border border-blue-100 p-8 mb-8">
-          <h2 className="text-2xl font-bold text-blue-800 mb-6">My Listings</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {myListings.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-blue-100 p-4 hover:shadow-xl hover:scale-105 transition-all duration-200"
-              >
-                <div className="bg-gray-200 rounded-lg h-40 mb-4 flex items-center justify-center">
-                  <span className="text-gray-500 text-sm">Item Image</span>
-                </div>
-                <h3 className="font-semibold text-gray-800 mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-blue-600 font-bold text-lg">{item.price}</p>
-                <div className="mt-3 flex gap-2">
-                  <button className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                    Edit
-                  </button>
-                  <button className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-blue-800">My Listings</h2>
+            <button
+              onClick={() => navigate("/list-item")}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Add New Item
+            </button>
           </div>
+
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-blue-600 text-lg">
+                Loading your listings...
+              </div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <div className="text-red-600 text-lg">{error}</div>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : myListings.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-gray-600 text-lg mb-4">
+                You haven't listed any items yet.
+              </div>
+              <button
+                onClick={() => navigate("/list-item")}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                List Your First Item
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {myListings.map((item) => (
+                <div
+                  key={item._id}
+                  className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-blue-100 p-4 hover:shadow-xl hover:scale-105 transition-all duration-200"
+                >
+                  <div className="rounded-lg h-40 mb-4 overflow-hidden">
+                    {item.images && item.images.length > 0 ? (
+                      <img
+                        src={item.images[0]}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="bg-gray-200 w-full h-full flex items-center justify-center">
+                        <span className="text-gray-500 text-sm">No Image</span>
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">
+                    {item.title}
+                  </h3>
+                  <div className="mb-2">
+                    <span className="text-blue-600 font-bold text-lg">
+                      ₹{item.price}
+                    </span>
+                    <span className="text-sm text-gray-500 ml-2 capitalize">
+                      ({item.condition})
+                    </span>
+                  </div>
+                  <div className="mb-3 flex gap-1 flex-wrap">
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                      {item.category}
+                    </span>
+                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                      {item.size}
+                    </span>
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        item.status === "available"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => navigate(`/edit-item/${item._id}`)}
+                      className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(item._id)}
+                      className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* My Purchases Section */}
@@ -186,27 +500,377 @@ const Dashboard = () => {
           <h2 className="text-2xl font-bold text-blue-800 mb-6">
             My Purchases
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {myPurchases.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-blue-100 p-4 hover:shadow-xl hover:scale-105 transition-all duration-200"
-              >
-                <div className="bg-gray-200 rounded-lg h-40 mb-4 flex items-center justify-center">
-                  <span className="text-gray-500 text-sm">Item Image</span>
-                </div>
-                <h3 className="font-semibold text-gray-800 mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-green-600 font-bold text-lg">{item.price}</p>
-                <div className="mt-3">
-                  <button className="w-full bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
-                    View Details
-                  </button>
-                </div>
+
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-blue-600 text-lg">
+                Loading your purchases...
               </div>
-            ))}
-          </div>
+            </div>
+          ) : myPurchases.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-gray-600 text-lg mb-4">
+                You haven't made any purchases yet.
+              </div>
+              <button
+                onClick={() => navigate("/")}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Browse Items
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {myPurchases.map((purchase) => (
+                <div
+                  key={purchase._id}
+                  className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-blue-100 p-4 hover:shadow-xl hover:scale-105 transition-all duration-200"
+                >
+                  <div className="rounded-lg h-40 mb-4 overflow-hidden">
+                    {purchase.item.images && purchase.item.images.length > 0 ? (
+                      <img
+                        src={purchase.item.images[0]}
+                        alt={purchase.item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="bg-gray-200 w-full h-full flex items-center justify-center">
+                        <span className="text-gray-500 text-sm">No Image</span>
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">
+                    {purchase.item.title}
+                  </h3>
+                  <div className="mb-2">
+                    <span className="text-green-600 font-bold text-lg">
+                      ₹{purchase.purchasePrice}
+                    </span>
+                    <span className="text-sm text-gray-500 ml-2 capitalize">
+                      ({purchase.item.condition})
+                    </span>
+                  </div>
+                  <div className="mb-2">
+                    <span className="text-xs text-gray-500">
+                      Purchased from:{" "}
+                      {purchase.seller.username || purchase.seller.email}
+                    </span>
+                  </div>
+                  <div className="mb-3 flex gap-1 flex-wrap">
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                      {purchase.item.category}
+                    </span>
+                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                      {purchase.item.size}
+                    </span>
+                  </div>
+                  <div className="mb-2">
+                    <span className="text-xs text-gray-500">
+                      Purchased:{" "}
+                      {new Date(purchase.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <button
+                      onClick={() => navigate(`/product/${purchase.item._id}`)}
+                      className="w-full bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Outgoing Swap Requests Section */}
+        <div className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-2xl border border-blue-100 p-8 mt-6">
+          <h2 className="text-2xl font-bold text-blue-800 mb-6">
+            My Swap Requests
+          </h2>
+
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-blue-600 text-lg">
+                Loading swap requests...
+              </div>
+            </div>
+          ) : outgoingSwapRequests.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-gray-600 text-lg mb-4">
+                You haven't made any swap requests yet.
+              </div>
+              <button
+                onClick={() => navigate("/swap")}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Start Swapping
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {outgoingSwapRequests.map((swapRequest) => (
+                <div
+                  key={swapRequest._id}
+                  className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-blue-100 p-4"
+                >
+                  <div className="flex flex-col md:flex-row gap-4">
+                    {/* Your Item */}
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800 mb-2">
+                        Your Item
+                      </h4>
+                      <div className="flex items-center space-x-3">
+                        {swapRequest.offeredItem.images &&
+                        swapRequest.offeredItem.images[0] ? (
+                          <img
+                            src={swapRequest.offeredItem.images[0]}
+                            alt={swapRequest.offeredItem.title}
+                            className="w-16 h-16 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <span className="text-gray-500 text-xs">
+                              No img
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold">
+                            {swapRequest.offeredItem.title}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            ₹{swapRequest.offeredItem.price}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Arrow */}
+                    <div className="flex items-center justify-center">
+                      <span className="text-2xl text-gray-400">⇄</span>
+                    </div>
+
+                    {/* Requested Item */}
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800 mb-2">
+                        Requested Item
+                      </h4>
+                      <div className="flex items-center space-x-3">
+                        {swapRequest.requestedItem.images &&
+                        swapRequest.requestedItem.images[0] ? (
+                          <img
+                            src={swapRequest.requestedItem.images[0]}
+                            alt={swapRequest.requestedItem.title}
+                            className="w-16 h-16 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <span className="text-gray-500 text-xs">
+                              No img
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold">
+                            {swapRequest.requestedItem.title}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            ₹{swapRequest.requestedItem.price}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Owner:{" "}
+                            {swapRequest.requestedItem.owner.username ||
+                              swapRequest.requestedItem.owner.email}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status */}
+                    <div className="flex flex-col justify-center items-end">
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                          swapRequest.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : swapRequest.status === "accepted" ||
+                              swapRequest.status === "completed"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {swapRequest.status.charAt(0).toUpperCase() +
+                          swapRequest.status.slice(1)}
+                      </span>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(swapRequest.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Incoming Swap Requests Section */}
+        <div className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-2xl border border-blue-100 p-8 mt-6">
+          <h2 className="text-2xl font-bold text-blue-800 mb-6">
+            Swap Requests Received
+          </h2>
+
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-blue-600 text-lg">
+                Loading received requests...
+              </div>
+            </div>
+          ) : incomingSwapRequests.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-gray-600 text-lg">
+                No swap requests received yet.
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {incomingSwapRequests.map((swapRequest) => (
+                <div
+                  key={swapRequest._id}
+                  className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-blue-100 p-4"
+                >
+                  <div className="flex flex-col gap-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-semibold text-gray-800">
+                          Swap request from{" "}
+                          {swapRequest.requester.username ||
+                            swapRequest.requester.email}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {swapRequest.requester.email}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Requested:{" "}
+                          {new Date(swapRequest.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                          swapRequest.status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : swapRequest.status === "accepted" ||
+                              swapRequest.status === "completed"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {swapRequest.status.charAt(0).toUpperCase() +
+                          swapRequest.status.slice(1)}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row gap-4">
+                      {/* Their Item */}
+                      <div className="flex-1">
+                        <h5 className="font-medium text-gray-700 mb-2">
+                          They're offering:
+                        </h5>
+                        <div className="flex items-center space-x-3">
+                          {swapRequest.offeredItem.images &&
+                          swapRequest.offeredItem.images[0] ? (
+                            <img
+                              src={swapRequest.offeredItem.images[0]}
+                              alt={swapRequest.offeredItem.title}
+                              className="w-16 h-16 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                              <span className="text-gray-500 text-xs">
+                                No img
+                              </span>
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-semibold">
+                              {swapRequest.offeredItem.title}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              ₹{swapRequest.offeredItem.price}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {swapRequest.offeredItem.condition}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Arrow */}
+                      <div className="flex items-center justify-center">
+                        <span className="text-2xl text-gray-400">⇄</span>
+                      </div>
+
+                      {/* Your Item */}
+                      <div className="flex-1">
+                        <h5 className="font-medium text-gray-700 mb-2">
+                          For your item:
+                        </h5>
+                        <div className="flex items-center space-x-3">
+                          {swapRequest.requestedItem.images &&
+                          swapRequest.requestedItem.images[0] ? (
+                            <img
+                              src={swapRequest.requestedItem.images[0]}
+                              alt={swapRequest.requestedItem.title}
+                              className="w-16 h-16 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                              <span className="text-gray-500 text-xs">
+                                No img
+                              </span>
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-semibold">
+                              {swapRequest.requestedItem.title}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              ₹{swapRequest.requestedItem.price}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {swapRequest.requestedItem.condition}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    {swapRequest.status === "pending" && (
+                      <div className="flex space-x-3 mt-4">
+                        <button
+                          onClick={() =>
+                            handleSwapResponse(swapRequest._id, "accepted")
+                          }
+                          className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold"
+                        >
+                          Accept Swap
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleSwapResponse(swapRequest._id, "rejected")
+                          }
+                          className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                        >
+                          Reject Swap
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

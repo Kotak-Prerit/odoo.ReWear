@@ -6,6 +6,7 @@ const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const itemRoutes = require("./routes/itemRoutes");
 const swapRoutes = require("./routes/swapRoutes");
+const purchaseRoutes = require("./routes/purchaseRoutes");
 
 // Connect to database
 connectDB();
@@ -24,6 +25,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/swaps", swapRoutes);
+app.use("/api/purchases", purchaseRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

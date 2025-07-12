@@ -27,7 +27,7 @@ const Register = () => {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("user", JSON.stringify(res.data));
         navigate("/dashboard");
-      } catch (err: any) {
+      } catch (err: unknown) {
         setErrors({ email: "Registration failed" });
       } finally {
         setSubmitting(false);
@@ -35,82 +35,136 @@ const Register = () => {
     },
   });
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
     try {
+      if (!credentialResponse.credential) return;
+      
       const res = await axios.post("/api/users/google-login", {
         token: credentialResponse.credential,
       });
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data));
       navigate("/dashboard");
-    } catch (err) {
+    } catch {
       // Handle error
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded shadow">
-      <h2 className="text-2xl font-bold mb-4">Register</h2>
-      <form onSubmit={formik.handleSubmit} className="space-y-4">
-        <div>
-          <label>Username</label>
-          <input
-            name="username"
-            type="text"
-            onChange={formik.handleChange}
-            value={formik.values.username}
-            className="w-full border p-2 rounded"
-          />
-          {formik.errors.username && (
-            <div className="text-red-500 text-sm">{formik.errors.username}</div>
-          )}
+    <section className="bg-gray-50 min-h-screen flex items-center justify-center">
+      <div className="flex bg-white items-center justify-center px-4 py-10 sm:px-6 sm:py-16 lg:px-8 lg:py-8">
+        <div className="xl:mx-auto xl:w-full shadow-md p-4 xl:max-w-sm 2xl:max-w-md">
+          <div className="mb-2 flex justify-center" />
+          <h2 className="text-center text-2xl font-bold leading-tight text-black">
+            Create your account
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Already have an account?{" "}
+            <Link 
+              to="/login" 
+              className="font-medium text-black hover:underline"
+            >
+              Sign in here
+            </Link>
+          </p>
+          <form className="mt-8" onSubmit={formik.handleSubmit}>
+            <div className="space-y-5">
+              <div>
+                <label
+                  htmlFor="username"
+                  className="text-base font-medium text-gray-900"
+                >
+                  Username
+                </label>
+                <div className="mt-2">
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    placeholder="Enter your username"
+                    onChange={formik.handleChange}
+                    value={formik.values.username}
+                    className="flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  />
+                  {formik.errors.username && (
+                    <div className="text-red-500 text-sm mt-1">{formik.errors.username}</div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="email"
+                  className="text-base font-medium text-gray-900"
+                >
+                  Email address
+                </label>
+                <div className="mt-2">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    onChange={formik.handleChange}
+                    value={formik.values.email}
+                    className="flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  />
+                  {formik.errors.email && (
+                    <div className="text-red-500 text-sm mt-1">{formik.errors.email}</div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label
+                  htmlFor="password"
+                  className="text-base font-medium text-gray-900"
+                >
+                  Password
+                </label>
+                <div className="mt-2">
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Create a password"
+                    onChange={formik.handleChange}
+                    value={formik.values.password}
+                    className="flex h-10 w-full rounded-md border border-gray-300 bg-transparent px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  />
+                  {formik.errors.password && (
+                    <div className="text-red-500 text-sm mt-1">{formik.errors.password}</div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <button
+                  type="submit"
+                  className="inline-flex w-full items-center justify-center rounded-md bg-black px-3.5 py-2.5 font-semibold leading-7 text-white hover:bg-black/80"
+                  disabled={formik.isSubmitting}
+                >
+                  {formik.isSubmitting ? "Creating account..." : "Create account"}
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <div className="mt-3 space-y-3">
+            <div className="flex justify-center">
+              <GoogleLogin 
+                onSuccess={handleGoogleSuccess} 
+                onError={() => {}}
+                text="signup_with"
+                theme="outline"
+                size="large"
+                width="100%"
+              />
+            </div>
+          </div>
         </div>
-        <div>
-          <label>Email</label>
-          <input
-            name="email"
-            type="email"
-            onChange={formik.handleChange}
-            value={formik.values.email}
-            className="w-full border p-2 rounded"
-          />
-          {formik.errors.email && (
-            <div className="text-red-500 text-sm">{formik.errors.email}</div>
-          )}
-        </div>
-        <div>
-          <label>Password</label>
-          <input
-            name="password"
-            type="password"
-            onChange={formik.handleChange}
-            value={formik.values.password}
-            className="w-full border p-2 rounded"
-          />
-          {formik.errors.password && (
-            <div className="text-red-500 text-sm">{formik.errors.password}</div>
-          )}
-        </div>
-        <button
-          type="submit"
-          className="w-full bg-green-600 text-white py-2 rounded"
-          disabled={formik.isSubmitting}
-        >
-          Register
-        </button>
-      </form>
-      <div className="my-4 text-center">or</div>
-      <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => {}} />
-      <div className="mt-6 text-center text-gray-600">
-        Already have an account?{" "}
-        <Link
-          to="/login"
-          className="text-blue-600 hover:underline font-semibold"
-        >
-          Sign in
-        </Link>
       </div>
-    </div>
+    </section>
   );
 };
 

@@ -1,5 +1,34 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+
+interface Item {
+  _id: string;
+  title: string;
+  description: string;
+  images: string[];
+  category: string;
+  condition: string;
+  tags: string[];
+  size: string;
+  price: number;
+  currency: string;
+  owner: {
+    _id: string;
+    username: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PaginationData {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -9,6 +38,41 @@ const Landing = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Products state
+  const [products, setProducts] = useState<Item[]>([]);
+  const [pagination, setPagination] = useState<PaginationData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch products function
+  const fetchProducts = useCallback(async (page: number = 1) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/items?page=${page}&limit=12`);
+
+      if (response.ok) {
+        const data = await response.json();
+        setProducts(data.items || []);
+        setPagination(data.pagination);
+      } else {
+        throw new Error("Failed to fetch products");
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setError("Failed to load products");
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load products on component mount
+  useEffect(() => {
+    fetchProducts(1);
+  }, [fetchProducts]);
 
   // Fake carousel images
   const carouselImages = [
@@ -307,33 +371,166 @@ const Landing = () => {
       <div className="px-8 py-6">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl font-bold text-blue-800 mb-6 text-center">
-            Product Listings
+            Latest Products
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Placeholder product cards */}
-            {[1, 2, 3, 4].map((item) => (
-              <div
-                key={item}
-                className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-blue-100 p-4 hover:shadow-xl hover:scale-105 transition-all duration-200"
+
+          {/* Loading State */}
+          {loading && (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-2 text-gray-600">Loading products...</p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <div className="text-center py-8">
+              <p className="text-red-600 mb-4">{error}</p>
+              <button
+                onClick={() => fetchProducts(1)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <div className="bg-gray-200 rounded-lg h-48 mb-4 flex items-center justify-center">
-                  <span className="text-gray-500 text-lg">Product Image</span>
-                </div>
-                <h3 className="font-semibold text-gray-800 mb-2">
-                  Product Title
-                </h3>
-                <p className="text-gray-600 text-sm mb-3">
-                  Product description will go here...
-                </p>
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-600 font-bold">$29.99</span>
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                    View Details
+                Try Again
+              </button>
+            </div>
+          )}
+
+          {/* Products Grid */}
+          {!loading && !error && products.length > 0 && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {products.map((product) => (
+                  <div
+                    key={product._id}
+                    className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg border border-blue-100 p-4 hover:shadow-xl hover:scale-105 transition-all duration-200"
+                  >
+                    <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
+                      {product.images && product.images.length > 0 ? (
+                        <img
+                          src={product.images[0]}
+                          alt={product.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="bg-gray-200 w-full h-full flex items-center justify-center">
+                          <span className="text-gray-500 text-lg">
+                            No Image
+                          </span>
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
+                        {product.condition}
+                      </div>
+                    </div>
+                    <h3
+                      className="font-semibold text-gray-800 mb-2 truncate"
+                      title={product.title}
+                    >
+                      {product.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                      {product.description}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                        {product.category}
+                      </span>
+                      <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
+                        Size {product.size}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-600 font-bold">
+                        ₹{product.price}
+                      </span>
+                      <button
+                        onClick={() => navigate(`/product/${product._id}`)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {pagination && pagination.totalPages > 1 && (
+                <div className="flex justify-center items-center space-x-4">
+                  <button
+                    onClick={() => fetchProducts(pagination.currentPage - 1)}
+                    disabled={!pagination.hasPrevPage}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      pagination.hasPrevPage
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    Previous
+                  </button>
+
+                  <div className="flex space-x-2">
+                    {Array.from(
+                      { length: Math.min(5, pagination.totalPages) },
+                      (_, i) => {
+                        let pageNum;
+                        if (pagination.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (pagination.currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (
+                          pagination.currentPage >=
+                          pagination.totalPages - 2
+                        ) {
+                          pageNum = pagination.totalPages - 4 + i;
+                        } else {
+                          pageNum = pagination.currentPage - 2 + i;
+                        }
+
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => fetchProducts(pageNum)}
+                            className={`px-3 py-2 rounded-lg transition-colors ${
+                              pageNum === pagination.currentPage
+                                ? "bg-blue-600 text-white"
+                                : "bg-white text-blue-600 hover:bg-blue-50 border border-blue-200"
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => fetchProducts(pagination.currentPage + 1)}
+                    disabled={!pagination.hasNextPage}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      pagination.hasNextPage
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    Next
                   </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+            </>
+          )}
+
+          {/* Empty State */}
+          {!loading && !error && products.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">
+                No products available at the moment.
+              </p>
+              <p className="text-sm text-gray-500">
+                Be the first to list a product!
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
